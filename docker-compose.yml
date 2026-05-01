@@ -5,11 +5,11 @@ services:
     build: .
     # For local development, we often just run the dev server so tailwind rebuilding works easily,
     # or you can run gunicorn with autoreload. Let's use the standard manage.py for local docker.
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8001
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
       - DEBUG=True
       - DATABASE_URL=postgres://user:password@db:5432/django_db

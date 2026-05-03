@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    # Tell gunicorn to use the Tailscale certificates we've mapped in
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:443 --certfile=/certs/cert.crt --keyfile=/certs/cert.key
+    volumes:
+      # Map the certificates from the user's home directory into the container
+      - ~/nm-thinkpad-t430.tailacb688.ts.net.crt:/certs/cert.crt:ro
+      - ~/nm-thinkpad-t430.tailacb688.ts.net.key:/certs/cert.key:ro
+    ports:
+      # Expose port 443 on the host
+      - "443:443"

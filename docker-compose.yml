@@ -3,17 +3,15 @@ version: '3.8'
 services:
   web:
     build: .
-    # For local development, we often just run the dev server so tailwind rebuilding works easily,
-    # or you can run gunicorn with autoreload. Let's use the standard manage.py for local docker.
-    command: python manage.py runserver 0.0.0.0:8001
-    volumes:
-      - .:/app
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8001
     ports:
       - "8001:8001"
     environment:
-      - DEBUG=True
+      - DEBUG=False
       - DATABASE_URL=postgres://user:password@db:5432/django_db
       - SECRET_KEY=django-insecure-testkey
+      - ALLOWED_HOSTS=nm-thinkpad-t430.tailacb688.ts.net,nm-thinkpad-t430,localhost,127.0.0.1
+      - CSRF_TRUSTED_ORIGINS=https://nm-thinkpad-t430.tailacb688.ts.net,https://nm-thinkpad-t430,http://nm-thinkpad-t430:8001,http://nm-thinkpad-t430,http://localhost:8001,http://127.0.0.1:8001
     depends_on:
       - db
 

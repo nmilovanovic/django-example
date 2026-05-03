@@ -30,6 +30,15 @@ ssh "${SERVER_USER}@${SERVER_HOST}" << EOF
     rm deploy.tar.gz
     # Run using the production base file and the TLS override
     docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build
+
+    # Automatically generate and apply migrations
+    echo "Running migrate --run-syncdb..."
+    docker compose -f docker-compose.yml -f docker-compose.tls.yml exec -T web python manage.py migrate --run-syncdb --noinput
+
+    echo "Creating superuser if it doesn't exist..."
+    docker compose -f docker-compose.yml -f docker-compose.tls.yml exec -T web python manage.py createsuperuser --noinput || true
+    echo "Running collectstatic..."
+    docker compose -f docker-compose.yml -f docker-compose.tls.yml exec -T web python manage.py collectstatic --noinput
 EOF
 
 SSH_EXIT_CODE=$?

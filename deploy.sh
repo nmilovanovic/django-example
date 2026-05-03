@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default configuration
-SERVER_HOST=${1:-"nm-thinkpad-t430"}
+SERVER_HOST=${1:-"nm-thinkpad-t430.tailacb688.ts.net"}
 SERVER_USER=nm
 DEPLOY_PATH="~/django-example-deploy"
 

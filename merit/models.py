@@ -27,6 +27,9 @@ class Member(models.Model):
     telephone = models.CharField(max_length=15)
     date_added = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        abstract = True
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}, {self.email}"
 

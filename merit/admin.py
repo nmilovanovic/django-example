@@ -1,8 +1,7 @@
 from django.contrib import admin
-from .models import School, Member, Student, SchoolManager, GlobalManager, AchievementType, Achievement
+from .models import School, Student, SchoolManager, GlobalManager, AchievementType, Achievement
 
 admin.site.register(School)
-admin.site.register(Member)
 admin.site.register(Student)
 admin.site.register(SchoolManager)
 admin.site.register(GlobalManager)

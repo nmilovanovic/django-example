@@ -4,15 +4,16 @@ from django.db import models
 class School(models.Model):
     name = models.CharField(max_length=256)
     address = models.CharField(max_length=512)
-    region = models.TextChoices(
-        "Nisavski",
-        "Borski",
-        "Zajecarski",
-        "Toplicki",
-        "Podunavski",
-        "Kosovo i Metohija",
-        "Grad Beograd",
-    )
+    REGION_CHOICES = [
+        ("Nisavski", "Nisavski"),
+        ("Borski", "Borski"),
+        ("Zajecarski", "Zajecarski"),
+        ("Toplicki", "Toplicki"),
+        ("Podunavski", "Podunavski"),
+        ("Kosovo i Metohija", "Kosovo i Metohija"),
+        ("Grad Beograd", "Grad Beograd"),
+    ]
+    region = models.CharField(max_length=50, choices=REGION_CHOICES, default="Grad Beograd")
 
     def __str__(self):
         return f"{self.name}, {self.address}, {self.region}"
@@ -60,7 +61,7 @@ class Achievement(models.Model):
     title = models.CharField(max_length=256)
     date = models.DateField(auto_now_add=True)
     type = models.ForeignKey(AchievementType, on_delete=models.CASCADE)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="achievements")
 
     def __str__(self):
         return f"{self.title}, {self.date}, {self.type}, {self.student}"

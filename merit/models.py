@@ -15,6 +15,12 @@ class School(models.Model):
     ]
     region = models.CharField(max_length=50, choices=REGION_CHOICES, default="Grad Beograd")
 
+    def get_top_students(self):
+        from django.db.models import Sum, Q
+        return self.student_set.annotate(
+            total_score=Sum('achievements__type__points', filter=Q(achievements__is_verified=True))
+        ).order_by('-total_score', 'first_name', 'last_name')
+
     def __str__(self):
         return f"{self.name}, {self.address}, {self.region}"
 
@@ -36,6 +42,13 @@ class Member(models.Model):
 
 class Student(Member):
     school = models.ForeignKey(School, on_delete=models.CASCADE)
+
+    def get_total_score(self):
+        from django.db.models import Sum
+        result = self.achievements.filter(is_verified=True).aggregate(
+            total=Sum('type__points')
+        )
+        return result['total'] or 0
 
 
 class SchoolManager(Member):
@@ -65,6 +78,7 @@ class Achievement(models.Model):
     date = models.DateField(auto_now_add=True)
     type = models.ForeignKey(AchievementType, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="achievements")
+    is_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.title}, {self.date}, {self.type}, {self.student}"

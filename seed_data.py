@@ -8,7 +8,7 @@ django.setup()
 
 from merit.models import School, Student, SchoolManager, GlobalManager, AchievementType, Achievement
 
-fake = Faker()
+fake = Faker('hr_HR')
 
 def seed(num_schools=5, num_students_per_school=10, num_achievements_per_student=3):
     print("Clearing old data...")
@@ -62,7 +62,8 @@ def seed(num_schools=5, num_students_per_school=10, num_achievements_per_student
                 Achievement.objects.create(
                     title=fake.catch_phrase(),
                     type=random.choice(achievement_types),
-                    student=student
+                    student=student,
+                    is_verified=random.choice([True, False])
                 )
 
     print("Creating Global Managers...")

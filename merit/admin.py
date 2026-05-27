@@ -6,4 +6,9 @@ admin.site.register(Student)
 admin.site.register(SchoolManager)
 admin.site.register(GlobalManager)
 admin.site.register(AchievementType)
-admin.site.register(Achievement)
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ('title', 'student', 'type', 'date', 'is_verified')
+    list_editable = ('is_verified',)
+    list_filter = ('is_verified', 'type', 'student__school')
+
+admin.site.register(Achievement, AchievementAdmin)

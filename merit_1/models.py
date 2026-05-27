@@ -19,7 +19,7 @@ class School(models.Model):
 
 
 class Member(models.Model):
-    first_name = models.CharField(max_lenght=256)
+    first_name = models.CharField(max_length=256)
     last_name = models.CharField(max_length=256)
     email = models.EmailField(unique=True)
     address = models.CharField(max_length=512)

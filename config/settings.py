@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "merit_1",
+    "merit",
 ]
 
 MIDDLEWARE = [

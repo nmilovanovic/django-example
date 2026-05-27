@@ -2,4 +2,4 @@ from django.http import HttpResponse
 
 
 def index(request):
-    return HttpResponse("Hello, world. You're at the merit_1 index.")
+    return HttpResponse("Hello, world. You're at the merit index.")

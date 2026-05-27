@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.0.4",
     "django-environ>=0.13.0",
     "django-ninja>=1.6.2",
+    "faker>=40.19.1",
     "gunicorn>=25.3.0",
     "psycopg2-binary>=2.9.12",
     "pytailwindcss>=0.3.0",

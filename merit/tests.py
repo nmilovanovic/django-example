@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from merit.models import School, Student, AchievementType, Achievement
 from django.db.models.functions import Coalesce
 
@@ -6,13 +7,15 @@ class StudentRatingTestCase(TestCase):
     def setUp(self):
         self.school = School.objects.create(name="Test School", address="123 Test St")
         
+        User = get_user_model()
+        user1 = User.objects.create_user(username="alice", email="alice@test.com", first_name="Alice", last_name="A")
+        user2 = User.objects.create_user(username="bob", email="bob@test.com", first_name="Bob", last_name="B")
+
         self.student1 = Student.objects.create(
-            first_name="Alice", last_name="A", email="alice@test.com", 
-            address="A", telephone="123", school=self.school
+            user=user1, address="A", telephone="123", school=self.school
         )
         self.student2 = Student.objects.create(
-            first_name="Bob", last_name="B", email="bob@test.com", 
-            address="B", telephone="123", school=self.school
+            user=user2, address="B", telephone="123", school=self.school
         )
         
         self.cert_type = AchievementType.objects.create(name="Cert", points=10)

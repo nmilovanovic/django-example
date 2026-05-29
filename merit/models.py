@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -19,22 +20,50 @@ class School(models.Model):
         from django.db.models import Sum, Q
         return self.student_set.annotate(
             total_score=Sum('achievements__type__points', filter=Q(achievements__is_verified=True))
-        ).order_by('-total_score', 'first_name', 'last_name')
+        ).order_by('-total_score', 'user__first_name', 'user__last_name')
 
     def __str__(self):
         return f"{self.name}, {self.address}, {self.region}"
 
 
 class Member(models.Model):
-    first_name = models.CharField(max_length=256)
-    last_name = models.CharField(max_length=256)
-    email = models.EmailField(unique=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="%(class)s_profile",
+        null=True,
+        blank=True
+    )
     address = models.CharField(max_length=512)
     telephone = models.CharField(max_length=15)
     date_added = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
+
+    @property
+    def first_name(self):
+        return self.user.first_name
+
+    @first_name.setter
+    def first_name(self, value):
+        self.user.first_name = value
+
+    @property
+    def last_name(self):
+        return self.user.last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        self.user.last_name = value
+
+    @property
+    def email(self):
+        return self.user.email
+
+    @email.setter
+    def email(self, value):
+        self.user.email = value
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}, {self.email}"

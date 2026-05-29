@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Dashboard - Merit{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 fade-in">
+    
+    <!-- Header Section -->
+    <div class="mb-8 border-b border-slate-200 pb-5">
+        <h2 class="text-3xl font-extrabold leading-7 text-slate-900 sm:truncate sm:text-4xl sm:tracking-tight">
+            {{ school.name }}
+        </h2>
+        <div class="mt-2 flex items-center text-sm text-slate-500 gap-4">
+            <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>{{ school.address }}</span>
+            <span>&bull;</span>
+            <span class="font-medium text-slate-700">Manager: {{ manager.first_name }} {{ manager.last_name }}</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Verifications -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Pending Verifications -->
+            <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-amber-100 overflow-hidden ring-1 ring-amber-500/10">
+                <div class="px-6 py-5 border-b border-amber-100 bg-amber-50/50 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Needs Verification
+                    </h3>
+                    {% if pending_achievements %}
+                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">{{ pending_achievements|length }}</span>
+                    {% endif %}
+                </div>
+                
+                {% if pending_achievements %}
+                <ul role="list" class="divide-y divide-amber-100/50">
+                    {% for achievement in pending_achievements %}
+                    <li class="px-6 py-5 hover:bg-amber-50/30 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-900">{{ achievement.student.first_name }} {{ achievement.student.last_name }}</span>
+                                    <span class="text-slate-400">&bull;</span>
+                                    <span class="text-sm font-medium text-indigo-600">{{ achievement.type.name }} (+{{ achievement.type.points }}pts)</span>
+                                </div>
+                                <p class="text-sm text-slate-700 mt-1 font-medium">{{ achievement.title }}</p>
+                                <p class="text-xs text-slate-500 mt-1">Submitted on {{ achievement.date|date:"M d, Y" }}</p>
+                            </div>
+                            <div class="ml-4">
+                                <form action="{% url 'merit:verify_achievement' achievement.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all hover:scale-105 active:scale-95">
+                                        Verify Now
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-12 px-6">
+                    <svg class="mx-auto h-12 w-12 text-amber-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7" /></svg>
+                    <h3 class="mt-2 text-sm font-semibold text-amber-900">All caught up</h3>
+                    <p class="mt-1 text-sm text-amber-700">No pending achievements to verify.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recently Verified -->
+            <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="text-lg font-bold text-slate-800">Recently Verified</h3>
+                </div>
+                {% if verified_achievements %}
+                <ul role="list" class="divide-y divide-slate-100">
+                    {% for achievement in verified_achievements %}
+                    <li class="px-6 py-4 flex items-center justify-between text-sm">
+                        <div>
+                            <span class="font-bold text-slate-900">{{ achievement.student.first_name }} {{ achievement.student.last_name }}</span>
+                            <span class="text-slate-500 ml-1">achieved</span>
+                            <span class="font-medium text-slate-800 ml-1">{{ achievement.title }}</span>
+                        </div>
+                        <div class="text-slate-400 text-xs flex items-center gap-1">
+                            <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                            {{ achievement.date|date:"M d" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-8 text-sm text-slate-500">No verified achievements yet.</div>
+                {% endif %}
+            </div>
+            
+        </div>
+
+        <!-- Right Column: Leaderboard -->
+        <div class="lg:col-span-1">
+            <div class="bg-gradient-to-b from-indigo-900 to-purple-900 rounded-2xl shadow-xl overflow-hidden relative">
+                <!-- Decorative pattern -->
+                <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                
+                <div class="px-6 py-6 border-b border-white/10 relative z-10 flex items-center justify-between">
+                    <h3 class="text-xl font-black text-white flex items-center gap-2">
+                        <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2l1.652 4.902h5.163l-4.175 3.14 1.587 4.98L10 12.02l-4.227 3.003 1.587-4.98-4.175-3.14h5.163L10 2z" clip-rule="evenodd" /></svg>
+                        Leaderboard
+                    </h3>
+                </div>
+                
+                <div class="relative z-10 p-2">
+                    <ul role="list" class="space-y-1">
+                        {% for st in top_students %}
+                        <li class="rounded-xl px-4 py-3 flex items-center justify-between transition-colors hover:bg-white/10 {% if forloop.counter == 1 %}bg-white/15 ring-1 ring-yellow-400/50{% endif %}">
+                            <div class="flex items-center gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+                                    {% if forloop.counter == 1 %}bg-yellow-400 text-yellow-900 shadow-[0_0_15px_rgba(250,204,21,0.5)]
+                                    {% elif forloop.counter == 2 %}bg-slate-300 text-slate-800
+                                    {% elif forloop.counter == 3 %}bg-amber-600 text-amber-50
+                                    {% else %}bg-white/10 text-white
+                                    {% endif %}">
+                                    {{ forloop.counter }}
+                                </div>
+                                <p class="text-sm font-bold text-white">{{ st.first_name }} {{ st.last_name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-white font-black text-lg">{{ st.total_score|default:"0" }}</span>
+                                <span class="text-indigo-200 text-xs">pts</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

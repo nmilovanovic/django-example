@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Achievement Details - Merit{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 fade-in">
+    
+    <div class="mb-6">
+        <a href="{% url 'merit:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-6 border-b border-slate-100 flex items-start justify-between">
+            <div>
+                <h2 class="text-2xl font-black text-slate-900">{{ achievement.title }}</h2>
+                <p class="text-sm text-slate-500 mt-1">Submitted on {{ achievement.date|date:"M d, Y" }}</p>
+            </div>
+            <div>
+                {% if achievement.is_verified %}
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                    </svg>
+                    Verified
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                    <svg class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Pending Verification
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="px-6 py-6">
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-8">
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-slate-500">Student</dt>
+                    <dd class="mt-1 text-sm text-slate-900 font-bold">{{ achievement.student.first_name }} {{ achievement.student.last_name }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-slate-500">School</dt>
+                    <dd class="mt-1 text-sm text-slate-900">{{ achievement.student.school.name }}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                    <dt class="text-sm font-medium text-slate-500">Competition</dt>
+                    <dd class="mt-1 text-sm text-slate-900 font-medium">{{ achievement.competition.type.name }} ({{ achievement.competition.year }})</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-slate-500">Placement</dt>
+                    <dd class="mt-1 text-sm text-slate-900">{{ achievement.get_placement_display }}</dd>
+                </div>
+                <div class="sm:col-span-1">
+                    <dt class="text-sm font-medium text-slate-500">Points Awarded</dt>
+                    <dd class="mt-1 text-xl font-black text-indigo-600">{{ achievement.points }} pts</dd>
+                </div>
+                <div class="sm:col-span-2">
+                    <dt class="text-sm font-medium text-slate-500">Evaluating Professor</dt>
+                    <dd class="mt-1 text-sm text-slate-900">{{ achievement.competition.professor.first_name }} {{ achievement.competition.professor.last_name }}</dd>
+                </div>
+            </dl>
+        </div>
+        
+        {% if is_professor and not achievement.is_verified %}
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <form action="{% url 'merit:verify_achievement' achievement.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit"
+                    class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all hover:scale-105 active:scale-95">
+                    Verify Achievement
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

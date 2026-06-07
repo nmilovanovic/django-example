@@ -1,196 +1,188 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib import messages
-from django.views.decorators.http import require_POST
+from django.urls import reverse_lazy
+from django.views.generic import TemplateView, CreateView, DetailView, View
+
 from .models import Achievement, Competition
 from .forms import AchievementForm, EnableCompetitionForm
+from .mixins import (
+    StudentRequiredMixin, 
+    SchoolManagerRequiredMixin, 
+    ProfessorRequiredMixin, 
+    AchievementAccessMixin
+)
 
+class CustomLoginView(LoginView):
+    template_name = "login.html"
+    
+    def form_valid(self, form):
+        messages.success(self.request, f"Welcome back, {form.get_user().first_name or form.get_user().username}!")
+        return super().form_valid(form)
+        
+    def get_success_url(self):
+        user = self.request.user
+        if hasattr(user, "student_profile"):
+            return reverse_lazy("merit:student_dashboard")
+        elif hasattr(user, "schoolmanager_profile"):
+            return reverse_lazy("merit:manager_dashboard")
+        elif hasattr(user, "professor_profile"):
+            return reverse_lazy("merit:professor_dashboard")
+        return reverse_lazy("merit:dashboard") # Default fallback
 
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect("merit:dashboard")
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy("merit:login")
+    
+    def dispatch(self, request, *args, **kwargs):
+        messages.info(request, "You have been logged out.")
+        return super().dispatch(request, *args, **kwargs)
 
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get("username")
-            password = form.cleaned_data.get("password")
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(
-                    request, f"Welcome back, {user.first_name or user.username}!"
-                )
-                return redirect("merit:dashboard")
+class DashboardDispatcherView(LoginRequiredMixin, View):
+    """Redirects authenticated users to their specific dashboard."""
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if hasattr(user, "student_profile"):
+            return redirect("merit:student_dashboard")
+        elif hasattr(user, "schoolmanager_profile"):
+            return redirect("merit:manager_dashboard")
+        elif hasattr(user, "professor_profile"):
+            return redirect("merit:professor_dashboard")
         else:
-            messages.error(request, "Invalid username or password.")
-    else:
-        form = AuthenticationForm()
+            messages.error(request, "Your account does not have an assigned role.")
+            return redirect("merit:logout")
 
-    return render(request, "login.html", {"form": form})
+class StudentDashboardView(LoginRequiredMixin, StudentRequiredMixin, CreateView):
+    template_name = "student_dashboard.html"
+    form_class = AchievementForm
+    success_url = reverse_lazy("merit:student_dashboard")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['school'] = self.request.user.student_profile.school
+        return kwargs
 
-def logout_view(request):
-    logout(request)
-    messages.info(request, "You have been logged out.")
-    return redirect("merit:login")
+    def form_valid(self, form):
+        achievement = form.save(commit=False)
+        achievement.student = self.request.user.student_profile
+        achievement.is_verified = False
+        achievement.save()
+        messages.success(self.request, "Achievement submitted successfully! Waiting for verification.")
+        return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        student = self.request.user.student_profile
+        context['student'] = student
+        context['achievements'] = student.achievements.all().order_by("-date", "-id")
+        context['total_score'] = student.get_total_score()
+        return context
 
-@login_required(login_url="merit:login")
-def dashboard(request):
-    user = request.user
+class ManagerDashboardView(LoginRequiredMixin, SchoolManagerRequiredMixin, CreateView):
+    template_name = "manager_dashboard.html"
+    form_class = EnableCompetitionForm
+    success_url = reverse_lazy("merit:manager_dashboard")
 
-    if hasattr(user, "student_profile"):
-        student = user.student_profile
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['school'] = self.request.user.schoolmanager_profile.school
+        return kwargs
 
-        # Handle Achievement Submission
-        if request.method == "POST":
-            form = AchievementForm(request.POST, school=student.school)
-            if form.is_valid():
-                achievement = form.save(commit=False)
-                achievement.student = student
-                achievement.is_verified = False
-                achievement.save()
-                messages.success(
-                    request,
-                    "Achievement submitted successfully! Waiting for verification.",
-                )
-                return redirect("merit:dashboard")
-        else:
-            form = AchievementForm(school=student.school)
+    def form_valid(self, form):
+        competition = form.save(commit=False)
+        competition.school = self.request.user.schoolmanager_profile.school
+        competition.save()
+        messages.success(self.request, "Competition enabled successfully!")
+        return super().form_valid(form)
 
-        achievements = student.achievements.all().order_by("-date", "-id")
-        total_score = student.get_total_score()
-
-        context = {
-            "student": student,
-            "achievements": achievements,
-            "total_score": total_score,
-            "form": form,
-        }
-        return render(request, "student_dashboard.html", context)
-
-    elif hasattr(user, "schoolmanager_profile"):
-        manager = user.schoolmanager_profile
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        manager = self.request.user.schoolmanager_profile
         school = manager.school
         
-        # Handle Enable Competition Form
-        if request.method == "POST" and "enable_competition" in request.POST:
-            comp_form = EnableCompetitionForm(request.POST, school=school)
-            if comp_form.is_valid():
-                competition = comp_form.save(commit=False)
-                competition.school = school
-                competition.save()
-                messages.success(request, "Competition enabled successfully!")
-                return redirect("merit:dashboard")
-        else:
-            comp_form = EnableCompetitionForm(school=school)
-
-        pending_achievements = Achievement.objects.filter(student__school=school, is_verified=False).select_related("student", "competition__type").order_by("date")
+        context['manager'] = manager
+        context['school'] = school
+        context['comp_form'] = context['form'] # Alias for the template
         
-        verified_achievements = Achievement.objects.filter(student__school=school, is_verified=True).select_related("student", "competition__type").order_by("-date")[:10]
+        context['pending_achievements'] = Achievement.objects.filter(
+            student__school=school, is_verified=False
+        ).select_related("student", "competition__type").order_by("date")
         
-        enabled_competitions = Competition.objects.filter(school=school).select_related("type", "professor")
+        context['verified_achievements'] = Achievement.objects.filter(
+            student__school=school, is_verified=True
+        ).select_related("student", "competition__type").order_by("-date")[:10]
+        
+        context['enabled_competitions'] = Competition.objects.filter(
+            school=school
+        ).select_related("type", "professor")
+        
+        context['top_students'] = school.get_top_students()
+        context['is_schoolmanager'] = True
+        return context
 
-        top_students = school.get_top_students()
+class ProfessorDashboardView(LoginRequiredMixin, ProfessorRequiredMixin, TemplateView):
+    template_name = "professor_dashboard.html"
 
-        context = {
-            "manager": manager,
-            "school": school,
-            "comp_form": comp_form,
-            "enabled_competitions": enabled_competitions,
-            "pending_achievements": pending_achievements,
-            "verified_achievements": verified_achievements,
-            "top_students": top_students,
-            "is_schoolmanager": True,
-        }
-        return render(request, "manager_dashboard.html", context)
-
-    elif hasattr(user, "professor_profile"):
-        manager = user.professor_profile
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        manager = self.request.user.professor_profile
         school = manager.school
-        pending_achievements = Achievement.objects.filter(
+        
+        context['professor'] = manager
+        context['school'] = school
+        
+        context['pending_achievements'] = Achievement.objects.filter(
             student__school=school, 
             is_verified=False, 
             competition__professor=manager
         ).select_related("student", "competition__type").order_by("date")
 
-        verified_achievements = Achievement.objects.filter(
+        context['verified_achievements'] = Achievement.objects.filter(
             student__school=school, 
             is_verified=True,
             competition__professor=manager
         ).select_related("student", "competition__type").order_by("-date")[:10]
 
-        enabled_competitions = Competition.objects.filter(school=school, professor=manager).select_related("type")
-
-        context = {
-            "professor": manager,
-            "school": school,
-            "pending_achievements": pending_achievements,
-            "verified_achievements": verified_achievements,
-            "enabled_competitions": enabled_competitions,
-            "is_professor": True,
-        }
-        return render(request, "professor_dashboard.html", context)
-
-    else:
-        messages.error(request, "Your account does not have an assigned role.")
-        return redirect("merit:logout")
-
-
-@login_required(login_url="merit:login")
-@require_POST
-def verify_achievement(request, achievement_id):
-    achievement = get_object_or_404(Achievement, id=achievement_id)
-    user = request.user
-
-    # Check permissions
-    if hasattr(user, "professor_profile"):
-        manager = user.professor_profile
-    else:
-        messages.error(request, "Permission denied. Only professors can verify achievements.")
-        return redirect("merit:dashboard")
-
-    if achievement.student.school != manager.school:
-        messages.error(request, "You can only verify achievements for your school.")
-        return redirect("merit:dashboard")
-
-    if achievement.competition.professor != manager:
-         messages.error(request, "You can only verify achievements for competitions you lead.")
-         return redirect("merit:dashboard")
-
-    achievement.is_verified = True
-    achievement.save()
-    messages.success(request, f"Verified achievement: {achievement.title}")
-
-    return redirect("merit:dashboard")
-
-
-@login_required(login_url="merit:login")
-def achievement_detail(request, achievement_id):
-    achievement = get_object_or_404(Achievement.objects.select_related("student", "competition__type", "competition__professor"), id=achievement_id)
-    user = request.user
-    
-    has_access = False
-    
-    if hasattr(user, "student_profile") and user.student_profile == achievement.student:
-        has_access = True
-    elif hasattr(user, "schoolmanager_profile") and user.schoolmanager_profile.school == achievement.student.school:
-        has_access = True
-    elif hasattr(user, "professor_profile") and user.professor_profile.school == achievement.student.school:
-        has_access = True
-    elif hasattr(user, "globalmanager_profile"):
-        if achievement.student.school in user.globalmanager_profile.schools.all():
-            has_access = True
-            
-    if not has_access:
-        messages.error(request, "You do not have permission to view this achievement.")
-        return redirect("merit:dashboard")
+        context['enabled_competitions'] = Competition.objects.filter(
+            school=school, professor=manager
+        ).select_related("type")
         
-    context = {
-        "achievement": achievement,
-        "is_professor": hasattr(user, "professor_profile") and achievement.competition.professor == user.professor_profile,
-    }
-    return render(request, "achievement_detail.html", context)
+        context['is_professor'] = True
+        return context
+
+class VerifyAchievementView(LoginRequiredMixin, ProfessorRequiredMixin, View):
+    def post(self, request, achievement_id):
+        achievement = get_object_or_404(Achievement, id=achievement_id)
+        manager = request.user.professor_profile
+
+        if achievement.student.school != manager.school:
+            messages.error(request, "You can only verify achievements for your school.")
+            return redirect("merit:professor_dashboard")
+
+        if achievement.competition.professor != manager:
+            messages.error(request, "You can only verify achievements for competitions you lead.")
+            return redirect("merit:professor_dashboard")
+
+        achievement.is_verified = True
+        achievement.save()
+        messages.success(request, f"Verified achievement: {achievement.title}")
+        return redirect("merit:professor_dashboard")
+
+class AchievementDetailView(LoginRequiredMixin, AchievementAccessMixin, DetailView):
+    model = Achievement
+    template_name = "achievement_detail.html"
+    context_object_name = "achievement"
+    pk_url_kwarg = "achievement_id"
+
+    def get_queryset(self):
+        return Achievement.objects.select_related("student", "competition__type", "competition__professor")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        achievement = self.object
+        context["is_professor"] = (
+            hasattr(user, "professor_profile") and 
+            achievement.competition.professor == user.professor_profile
+        )
+        return context
